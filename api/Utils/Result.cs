@@ -2,6 +2,11 @@ using System;
 
 namespace api.Utils
 {
+    /*
+        Monadic result type.
+
+        Added to better represent and work with computations that may fail.
+     */
     public sealed class Result<TSuccess, TError>
     {
         private readonly TSuccess _successVal;

@@ -2,6 +2,11 @@ using System;
 
 namespace api.Utils
 {
+    /*
+        Monadic optional type.
+
+        Added to aid in better representation of "no-value" rather than nulls.
+     */
     public sealed class Option<T>
     {
         private readonly T _value;
