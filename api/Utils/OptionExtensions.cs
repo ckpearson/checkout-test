@@ -19,9 +19,6 @@ namespace api.Utils
                 : ifNone();
         }
 
-        public static Option<T> MapIfNone<T>(this Option<T> option, Func<T> provider)
-            => option.Match(v => Option<T>.Some(v), () => Option<T>.Some(provider()));
-
         public static Option<TR> Bind<T, TR>(
             this Option<T> option,
             Func<T, Option<TR>> bindFunc)
@@ -44,9 +41,6 @@ namespace api.Utils
 
         public static T ValueOrElse<T>(this Option<T> option, T elseValue)
             => option.Match(v => v, () => elseValue);
-
-        public static Option<TR> Select<T, TR>(this Option<T> option, Func<T, TR> selectFunc)
-            => option.Map(selectFunc);
 
         public static Option<TR> SelectMany<T, T2, TR>(
             this Option<T> option,
