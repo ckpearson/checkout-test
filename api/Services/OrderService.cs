@@ -15,10 +15,23 @@ namespace api.Services
             _store = store;
         }
 
-        public Task<Result<Order, string>> AddProductToOrder(int orderId, int productId)
-        {
-            throw new System.NotImplementedException();
-        }
+        public Task<Result<Order, string>> AddProductToOrder(int userId, int productId)
+            =>
+                (from user in _store.GetById<User>(userId).ResOfOption(() => $"No user for ID: {userId}")
+                from product in _store.GetById<Product>(productId).ResOfOption(() => $"No product for ID: {productId}")
+                from activeOrder in GetOrCreateActiveOrderForUser(userId)
+                select activeOrder)
+                .Map(res => res.Map(order => {
+                    if (order.OrderLines.ContainsKey(productId))
+                    {
+                        order.OrderLines[productId]++;
+                    }
+                    else {
+                        order.OrderLines.Add(productId, 1);
+                    }
+                    return order;
+                }));
+                
 
         public Task<Result<IEnumerable<Order>, string>> GetCompletedOrdersForUser(int userId)
             =>
@@ -37,6 +50,7 @@ namespace api.Services
                         () => _store.Create<Order>().Map(order => {
                             order.CompletionTimestamp = Option<long>.None;
                             order.UserId = userId;
+                            order.OrderLines = new Dictionary<int, int>();
                             return Option<Order>.Some(order);
                         })
                     ))

@@ -24,7 +24,7 @@ namespace api.Controllers
         {
             return (await _orderService.GetCompletedOrdersForUser(userId))
                 .Map(v => v.Select(OrderDto.FromModel))
-                .Match(Ok, e => (IActionResult)StatusCode(500,e));
+                .Match(Ok, e => (IActionResult)StatusCode(500, e));
         }
 
         [Route("current/{userId}")]
@@ -32,6 +32,14 @@ namespace api.Controllers
         {
             return (await _orderService.GetOrCreateActiveOrderForUser(userId))
             .Map(OrderDto.FromModel)
+            .Match(Ok, e => (IActionResult)StatusCode(500, e));
+        }
+
+        [Route("current/{userId}/addProduct/{productId}")]
+        [HttpGet]
+        public async Task<IActionResult> AddProductToCurrentOrder(int userId, int productId)
+        {
+            return (await _orderService.AddProductToOrder(userId, productId))
             .Match(Ok, e => (IActionResult)StatusCode(500,e));
         }
     }
