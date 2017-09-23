@@ -35,11 +35,19 @@ namespace api.Controllers
             .Match(Ok, e => (IActionResult)StatusCode(500, e));
         }
 
-        [Route("current/{userId}/addProduct/{productId}")]
+        [Route("current/{userId}/addOneOf/{productId}")]
         [HttpGet]
         public async Task<IActionResult> AddProductToCurrentOrder(int userId, int productId)
         {
             return (await _orderService.AddProductToOrder(userId, productId))
+            .Match(Ok, e => (IActionResult)StatusCode(500,e));
+        }
+
+        [Route("current/{userId}/removeOneOf/{productId}")]
+        [HttpGet]
+        public async Task<IActionResult> RemoveProductFromCurrentOrder(int userId, int productId)
+        {
+            return (await _orderService.RemoveProductFromOrder(userId, productId))
             .Match(Ok, e => (IActionResult)StatusCode(500,e));
         }
     }
