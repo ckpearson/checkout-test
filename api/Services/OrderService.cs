@@ -24,7 +24,7 @@ namespace api.Services
                 Obviously were this to be backed by some proper data store, there would
                 likely need to be some sort of commit-phase here.
          */
-        public Task<Result<Order, string>> AddProductToOrder(int userId, int productId)
+        public Task<Result<Order, string>> AddProductToActiveOrder(int userId, int productId)
             =>
                 (from user in _store.GetById<User>(userId).ResOfOption(() => $"No user for ID: {userId}")
                  from product in _store.GetById<Product>(productId).ResOfOption(() => $"No product for ID: {productId}")
@@ -52,7 +52,7 @@ namespace api.Services
             IMPLEMENTATION:
                 This would require a commit-phase were a proper store used.
          */
-        public Task<Result<Order, string>> RemoveProductFromOrder(int userId, int productId)
+        public Task<Result<Order, string>> RemoveProductFromActiveOrder(int userId, int productId)
             =>
                 (from user in _store.GetById<User>(userId).ResOfOption(() => $"No user for ID: {userId}")
                  from product in _store.GetById<Product>(productId).ResOfOption(() => $"No product for ID: {productId}")
@@ -75,24 +75,36 @@ namespace api.Services
                     return order;
                 }));
 
-        public Task<Result<Order, string>> SetProductQuanityOnOrder(int userId, int productId, int quantity)
+        public Task<Result<Order, string>> SetProductQuanityOnActiveOrder(int userId, int productId, int quantity)
             =>
                 (from normalisedQuantity in Task.FromResult((quantity < 0 ? Option<int>.None : Option<int>.Some(quantity))
                     .ResOfOption(() => $"Quantity must be positive; {quantity} is invalid"))
-                from user in _store.GetById<User>(userId).ResOfOption(() => $"No user for ID: {userId}")
-                from product in _store.GetById<Product>(productId).ResOfOption(() => $"No product for ID: {productId}")
-                from activeOrder in GetOrCreateActiveOrderForUser(userId)
-                select activeOrder)
-                .Map(res => res.Map(order => {
+                 from user in _store.GetById<User>(userId).ResOfOption(() => $"No user for ID: {userId}")
+                 from product in _store.GetById<Product>(productId).ResOfOption(() => $"No product for ID: {productId}")
+                 from activeOrder in GetOrCreateActiveOrderForUser(userId)
+                 select activeOrder)
+                .Map(res => res.Map(order =>
+                {
                     if (quantity == 0 && order.OrderLines.ContainsKey(productId))
                     {
                         order.OrderLines.Remove(productId);
-                    }else {
+                    }
+                    else
+                    {
                         order.OrderLines[productId] = quantity;
                     }
                     return order;
                 }));
 
+        public Task<Result<Order, string>> ClearProductsForActiveOrder(int userId)
+            =>
+            (from user in _store.GetById<User>(userId).ResOfOption(() => $"No user for ID: {userId}")
+            from activeOrder in GetOrCreateActiveOrderForUser(userId)
+            select activeOrder)
+            .Map(res => res.Map(order => {
+                order.OrderLines.Clear();
+                return order;
+            }));
 
         public Task<Result<IEnumerable<Order>, string>> GetCompletedOrdersForUser(int userId)
             =>

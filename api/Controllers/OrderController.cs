@@ -39,7 +39,7 @@ namespace api.Controllers
         [HttpGet]
         public async Task<IActionResult> AddProductToCurrentOrder(int userId, int productId)
         {
-            return (await _orderService.AddProductToOrder(userId, productId))
+            return (await _orderService.AddProductToActiveOrder(userId, productId))
             .Map(OrderDto.FromModel)
             .Match(Ok, e => (IActionResult)StatusCode(500,e));
         }
@@ -48,7 +48,7 @@ namespace api.Controllers
         [HttpGet]
         public async Task<IActionResult> RemoveProductFromCurrentOrder(int userId, int productId)
         {
-            return (await _orderService.RemoveProductFromOrder(userId, productId))
+            return (await _orderService.RemoveProductFromActiveOrder(userId, productId))
             .Map(OrderDto.FromModel)
             .Match(Ok, e => (IActionResult)StatusCode(500,e));
         }
@@ -57,9 +57,18 @@ namespace api.Controllers
         [HttpGet]
         public async Task<IActionResult> SetProductQuantityForCurrentOrder(int userId, int productId, int quantity)
         {
-            return (await _orderService.SetProductQuanityOnOrder(userId, productId, quantity))
+            return (await _orderService.SetProductQuanityOnActiveOrder(userId, productId, quantity))
             .Map(OrderDto.FromModel)
             .Match(Ok, e => (IActionResult)StatusCode(500, e));
+        }
+
+        [Route("current/{userId}/clear")]
+        [HttpGet]
+        public async Task<IActionResult> ClearProductsFromCurrentOrder(int userId)
+        {
+            return (await _orderService.ClearProductsForActiveOrder(userId))
+            .Map(OrderDto.FromModel)
+            .Match(Ok, e => (IActionResult)StatusCode(500,e));
         }
     }
 }
