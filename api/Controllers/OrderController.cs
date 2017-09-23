@@ -70,5 +70,14 @@ namespace api.Controllers
             .Map(OrderDto.FromModel)
             .Match(Ok, e => (IActionResult)StatusCode(500,e));
         }
+
+        [Route("current/{userId}/complete")]
+        [HttpGet]
+        public async Task<IActionResult> CompleteActiveOrder(int userId)
+        {
+            return (await _orderService.CompleteActiveOrder(userId))
+            .Map(OrderDto.FromModel)
+            .Match(Ok, e => (IActionResult)StatusCode(500,e));
+        }
     }
 }

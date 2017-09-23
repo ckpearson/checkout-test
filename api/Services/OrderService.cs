@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -131,11 +132,20 @@ namespace api.Services
                     .ResOfOption(() => "Failed to locate or construct order for user")
                 select order;
 
-        public Task<bool> OrderBelongsToUser(int userId)
-        {
-            throw new System.NotImplementedException();
-        }
-
-
+        public Task<Result<Order, string>> CompleteActiveOrder(int userId)
+            =>
+            (from user in _store.GetById<User>(userId).ResOfOption(() => $"No user for ID: {userId}")
+            from activeOrder in _store.SingleWhere<Order>(o => o.UserId == userId && !o.CompletionTimestamp.HasValue)
+                .ResOfOption(() => $"No active order exists for user: {userId}")
+            select activeOrder)
+            .Map(res => res.Bind(order => {
+                if (order.OrderLines.Count == 0)
+                {
+                    return Result<Order,string>.AsError("Order does not contain any lines");
+                }
+                
+                order.CompletionTimestamp = Option<long>.Some(DateTime.UtcNow.Ticks);
+                return Result<Order,string>.AsSuccess(order);
+            }));
     }
 }

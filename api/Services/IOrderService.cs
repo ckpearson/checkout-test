@@ -13,6 +13,6 @@ namespace api.Services
         Task<Result<Order, string>> RemoveProductFromActiveOrder(int userId, int productId);
         Task<Result<Order, string>> SetProductQuanityOnActiveOrder(int userId, int productId, int quantity);
         Task<Result<Order, string>> ClearProductsForActiveOrder(int userId);
-        Task<bool> OrderBelongsToUser(int userId);
+        Task<Result<Order, string>> CompleteActiveOrder(int userId);
     }
 }
