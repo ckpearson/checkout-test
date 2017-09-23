@@ -26,6 +26,7 @@ namespace api
         {
             services.AddMvc();
             services.AddSingleton<IDataStore, DummyDataStore>();
+            services.AddTransient<IUserService, UserService>();
             services.AddTransient<IProductService, ProductService>();
             services.AddTransient<IOrderService, OrderService>();
         }

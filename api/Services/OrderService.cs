@@ -10,10 +10,17 @@ namespace api.Services
     public class OrderService : IOrderService
     {
         private readonly IDataStore _store;
+        private readonly IUserService _userService;
+        private readonly IProductService _productService;
 
-        public OrderService(IDataStore store)
+        public OrderService(
+            IDataStore store,
+            IUserService userService,
+            IProductService productService)
         {
             _store = store;
+            _userService = userService;
+            _productService = productService;
         }
 
         /*
@@ -117,7 +124,8 @@ namespace api.Services
 
         public Task<Result<Order, string>> GetOrCreateActiveOrderForUser(int userId)
             =>
-                from user in _store.GetById<User>(userId).ResOfOption(() => $"No user for ID: {userId}")
+                from user in _userService.GetById(userId).ResOfOption(() => "No user for ID: {userId}")
+                // from user in _store.GetById<User>(userId).ResOfOption(() => $"No user for ID: {userId}")
                 from order in _store.SingleWhere<Order>(o => o.UserId == userId && !o.CompletionTimestamp.HasValue)
                     .Bind(o => o.Match<Order, Task<Option<Order>>>(
                         order => Task.FromResult(Option<Order>.Some(order)),
@@ -143,7 +151,7 @@ namespace api.Services
                 {
                     return Result<Order,string>.AsError("Order does not contain any lines");
                 }
-                
+
                 order.CompletionTimestamp = Option<long>.Some(DateTime.UtcNow.Ticks);
                 return Result<Order,string>.AsSuccess(order);
             }));
