@@ -10,6 +10,9 @@ namespace api.Services
     {
         Task<IEnumerable<T>> GetAll<T>() where T : IDataItem;
         Task<Option<IEnumerable<T>>> GetAllWhere<T>(Func<T,bool> predicate) where T : IDataItem;
+        Task<Option<T>> SingleWhere<T>(Func<T,bool> predicate) where T : IDataItem;
         Task<Option<T>> GetById<T>(int id) where T : IDataItem;
+
+        Task<T> Create<T>() where T : IDataItem;
     }
 }

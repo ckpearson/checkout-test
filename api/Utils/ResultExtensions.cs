@@ -44,11 +44,11 @@ namespace api.Utils
             Func<TSuccess, TNewSucess> projection)
             => result.Map(projection);
 
-        public static Result<TNewSuccess, TError> SelectMany<TSuccess, TISuccess, TNewSuccess, TError>(
-            this Result<TSuccess, TError> result,
-            Func<TSuccess, Result<TISuccess, TError>> bindFunc,
-            Func<TSuccess, TISuccess, TNewSuccess> projection)
-            => result.Bind(outer => bindFunc(outer).Bind(inner => Result<TNewSuccess, TError>.AsSuccess(projection(outer, inner))));
+        // public static Result<TNewSuccess, TError> SelectMany<TSuccess, TISuccess, TNewSuccess, TError>(
+        //     this Result<TSuccess, TError> result,
+        //     Func<TSuccess, Result<TISuccess, TError>> bindFunc,
+        //     Func<TSuccess, TISuccess, TNewSuccess> projection)
+        //     => result.Bind(outer => bindFunc(outer).Bind(inner => Result<TNewSuccess, TError>.AsSuccess(projection(outer, inner))));
 
         public static Result<TSuccess, TError> ResOfOption<TSuccess, TError>(
             this Option<TSuccess> option,

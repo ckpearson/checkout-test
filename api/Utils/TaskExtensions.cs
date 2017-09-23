@@ -58,21 +58,6 @@ namespace api.Utils
             return task.Bind(v => Task.FromResult(mapFunc(v)));
         }
 
-        public static Task<TR> Select<T, TR>(
-            this Task<T> task,
-            Func<T, TR> projection)
-        {
-            return task.Map(projection);
-        }
-
-        public static Task<TR> SelectMany<T, TI, TR>(
-            this Task<T> task,
-            Func<T, Task<TI>> bindFunc,
-            Func<T, TI, TR> projection)
-        {
-            return task.Bind(outer => bindFunc(outer).Bind(inner => Task.FromResult(projection(outer, inner))));
-        }
-
         // Task-carrying inner-monad binders
         public static Task<Option<TR>> Select<T, TR>(
             this Task<Option<T>> optionTask,

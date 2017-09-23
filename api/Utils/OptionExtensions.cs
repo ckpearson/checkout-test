@@ -19,6 +19,9 @@ namespace api.Utils
                 : ifNone();
         }
 
+        public static Option<T> MapIfNone<T>(this Option<T> option, Func<T> provider)
+            => option.Match(v => Option<T>.Some(v), () => Option<T>.Some(provider()));
+
         public static Option<TR> Bind<T, TR>(
             this Option<T> option,
             Func<T, Option<TR>> bindFunc)

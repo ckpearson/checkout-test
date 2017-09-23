@@ -26,5 +26,13 @@ namespace api.Controllers
                 .Map(v => v.Select(OrderDto.FromModel))
                 .Match(Ok, e => (IActionResult)StatusCode(500,e));
         }
+
+        [Route("current/{userId}")]
+        public async Task<IActionResult> GetCurrentOrderForUser(int userId)
+        {
+            return (await _orderService.GetOrCreateActiveOrderForUser(userId))
+            .Map(OrderDto.FromModel)
+            .Match(Ok, e => (IActionResult)StatusCode(500,e));
+        }
     }
 }
