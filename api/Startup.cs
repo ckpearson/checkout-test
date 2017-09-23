@@ -26,6 +26,8 @@ namespace api
         {
             services.AddMvc();
             services.AddSingleton<IDataStore, DummyDataStore>();
+            services.AddTransient<IProductService, ProductService>();
+            services.AddTransient<IOrderService, OrderService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

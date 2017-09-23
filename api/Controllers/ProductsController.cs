@@ -11,21 +11,21 @@ namespace api.Controllers
     [Route("api/products")]
     public class ProductsController : Controller
     {
-        private readonly IDataStore _store;
+        private readonly IProductService _productService;
 
-        public ProductsController(IDataStore store)
+        public ProductsController(IProductService productService)
         {
-            _store = store;
+            _productService = productService;
         }
         public async Task<IEnumerable<Product>> GetAll()
         {
-            return await _store.GetAll<Product>();
+            return await _productService.GetAll();
         }
 
         [Route("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            return (await _store.GetById<Product>(id)).Match<Product, IActionResult>(Ok, NotFound);
+            return (await _productService.GetById(id)).Match<Product, IActionResult>(Ok, NotFound);
         }
     }
 }
