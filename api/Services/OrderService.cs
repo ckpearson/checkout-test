@@ -23,6 +23,26 @@ namespace api.Services
             _productService = productService;
         }
 
+        private Task<Result<User, string>> GetUserById(int id)
+            => _userService.GetById(id).ResOfOption(() => $"No user for ID: {id}");
+
+        private Task<Result<Product, string>> GetProductById(int id)
+            => _productService.GetById(id).ResOfOption(() => $"No product for ID: {id}");
+
+        private Task<Result<Order, string>> ModifyOrderForProduct(
+            int userId,
+            int productId,
+            Func<Order, Product, Result<Order, string>> modBind)
+        =>
+            (from product in GetProductById(productId)
+             from activeOrder in GetOrCreateActiveOrderForUser(userId)
+             select Tuple.Create(activeOrder, product))
+            .Map(res => res.Bind(t =>
+            {
+                t.Deconstruct(out var activeOrder, out var product);
+                return modBind(activeOrder, product);
+            }));
+
         /*
             ASSUMPTIONS:
                 1. That it is ok for further add ops to increase quantity
@@ -33,23 +53,19 @@ namespace api.Services
                 likely need to be some sort of commit-phase here.
          */
         public Task<Result<Order, string>> AddProductToActiveOrder(int userId, int productId)
-            =>
-                (from user in _store.GetById<User>(userId).ResOfOption(() => $"No user for ID: {userId}")
-                 from product in _store.GetById<Product>(productId).ResOfOption(() => $"No product for ID: {productId}")
-                 from activeOrder in GetOrCreateActiveOrderForUser(userId)
-                 select activeOrder)
-                .Map(res => res.Map(order =>
+            => ModifyOrderForProduct(userId, productId,
+                (activeOrder, product) =>
                 {
-                    if (order.OrderLines.ContainsKey(productId))
+                    if (activeOrder.OrderLines.ContainsKey(product.Id))
                     {
-                        order.OrderLines[productId]++;
+                        activeOrder.OrderLines[product.Id]++;
                     }
                     else
                     {
-                        order.OrderLines.Add(productId, 1);
+                        activeOrder.OrderLines.Add(product.Id, 1);
                     }
-                    return order;
-                }));
+                    return Result<Order, string>.AsSuccess(activeOrder);
+                });
 
         /*
             ASSUMPTIONS:
@@ -61,62 +77,57 @@ namespace api.Services
                 This would require a commit-phase were a proper store used.
          */
         public Task<Result<Order, string>> RemoveProductFromActiveOrder(int userId, int productId)
-            =>
-                (from user in _store.GetById<User>(userId).ResOfOption(() => $"No user for ID: {userId}")
-                 from product in _store.GetById<Product>(productId).ResOfOption(() => $"No product for ID: {productId}")
-                 from activeOrder in GetOrCreateActiveOrderForUser(userId)
-                 select activeOrder)
-                .Map(res => res.Map(order =>
+            => ModifyOrderForProduct(userId, productId,
+                (activeOrder, product) =>
                 {
-                    if (order.OrderLines.ContainsKey(productId))
+                    if (activeOrder.OrderLines.ContainsKey(product.Id))
                     {
-                        var quantity = order.OrderLines[productId];
+                        var quantity = activeOrder.OrderLines[product.Id];
                         if (quantity - 1 <= 0)
                         {
-                            order.OrderLines.Remove(productId);
+                            activeOrder.OrderLines.Remove(product.Id);
                         }
                         else
                         {
-                            order.OrderLines[productId]--;
+                            activeOrder.OrderLines[product.Id]--;
                         }
                     }
-                    return order;
-                }));
+                    return Result<Order, string>.AsSuccess(activeOrder);
+                });
 
         public Task<Result<Order, string>> SetProductQuanityOnActiveOrder(int userId, int productId, int quantity)
-            =>
-                (from normalisedQuantity in Task.FromResult((quantity < 0 ? Option<int>.None : Option<int>.Some(quantity))
-                    .ResOfOption(() => $"Quantity must be positive; {quantity} is invalid"))
-                 from user in _store.GetById<User>(userId).ResOfOption(() => $"No user for ID: {userId}")
-                 from product in _store.GetById<Product>(productId).ResOfOption(() => $"No product for ID: {productId}")
-                 from activeOrder in GetOrCreateActiveOrderForUser(userId)
-                 select activeOrder)
-                .Map(res => res.Map(order =>
+            => ModifyOrderForProduct(userId, productId,
+                (activeOrder, product) =>
                 {
-                    if (quantity == 0 && order.OrderLines.ContainsKey(productId))
+                    if (quantity < 0)
                     {
-                        order.OrderLines.Remove(productId);
+                        return Result<Order, string>.AsError($"Quantity must be positive; {quantity} is not valid");
+                    }
+
+                    if (quantity == 0 && activeOrder.OrderLines.ContainsKey(product.Id))
+                    {
+                        activeOrder.OrderLines.Remove(product.Id);
                     }
                     else
                     {
-                        order.OrderLines[productId] = quantity;
+                        activeOrder.OrderLines[product.Id] = quantity;
                     }
-                    return order;
-                }));
+
+                    return Result<Order, string>.AsSuccess(activeOrder);
+                });
 
         public Task<Result<Order, string>> ClearProductsForActiveOrder(int userId)
             =>
-            (from user in _store.GetById<User>(userId).ResOfOption(() => $"No user for ID: {userId}")
-            from activeOrder in GetOrCreateActiveOrderForUser(userId)
-            select activeOrder)
-            .Map(res => res.Map(order => {
+            GetOrCreateActiveOrderForUser(userId)
+            .Map(res => res.Map(order =>
+            {
                 order.OrderLines.Clear();
                 return order;
             }));
 
         public Task<Result<IEnumerable<Order>, string>> GetCompletedOrdersForUser(int userId)
             =>
-                from user in _store.GetById<User>(userId).ResOfOption(() => $"No user for ID: {userId}")
+                from user in GetUserById(userId)
                 from orders in
                     _store.GetAllWhere<Order>(o => o.UserId == user.Id && o.CompletionTimestamp.HasValue)
                     .ResOfOption(() => "No completed orders found for this user")
@@ -124,8 +135,7 @@ namespace api.Services
 
         public Task<Result<Order, string>> GetOrCreateActiveOrderForUser(int userId)
             =>
-                from user in _userService.GetById(userId).ResOfOption(() => "No user for ID: {userId}")
-                // from user in _store.GetById<User>(userId).ResOfOption(() => $"No user for ID: {userId}")
+                from user in GetUserById(userId)
                 from order in _store.SingleWhere<Order>(o => o.UserId == userId && !o.CompletionTimestamp.HasValue)
                     .Bind(o => o.Match<Order, Task<Option<Order>>>(
                         order => Task.FromResult(Option<Order>.Some(order)),
@@ -141,19 +151,20 @@ namespace api.Services
                 select order;
 
         public Task<Result<Order, string>> CompleteActiveOrder(int userId)
-            =>
-            (from user in _store.GetById<User>(userId).ResOfOption(() => $"No user for ID: {userId}")
-            from activeOrder in _store.SingleWhere<Order>(o => o.UserId == userId && !o.CompletionTimestamp.HasValue)
-                .ResOfOption(() => $"No active order exists for user: {userId}")
-            select activeOrder)
-            .Map(res => res.Bind(order => {
+            => (from user in GetUserById(userId)
+                from activeOrder in
+                     _store.SingleWhere<Order>(o => o.UserId == user.Id && !o.CompletionTimestamp.HasValue)
+                    .ResOfOption(() => $"Unable to locate an active order for user: {user.Id}")
+                select activeOrder)
+            .Map(res => res.Bind(order =>
+            {
                 if (order.OrderLines.Count == 0)
                 {
-                    return Result<Order,string>.AsError("Order does not contain any lines");
+                    return Result<Order, string>.AsError("Order does not contain any lines");
                 }
 
                 order.CompletionTimestamp = Option<long>.Some(DateTime.UtcNow.Ticks);
-                return Result<Order,string>.AsSuccess(order);
+                return Result<Order, string>.AsSuccess(order);
             }));
     }
 }
