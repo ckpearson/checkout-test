@@ -40,6 +40,7 @@ namespace api.Controllers
         public async Task<IActionResult> AddProductToCurrentOrder(int userId, int productId)
         {
             return (await _orderService.AddProductToOrder(userId, productId))
+            .Map(OrderDto.FromModel)
             .Match(Ok, e => (IActionResult)StatusCode(500,e));
         }
 
@@ -48,7 +49,17 @@ namespace api.Controllers
         public async Task<IActionResult> RemoveProductFromCurrentOrder(int userId, int productId)
         {
             return (await _orderService.RemoveProductFromOrder(userId, productId))
+            .Map(OrderDto.FromModel)
             .Match(Ok, e => (IActionResult)StatusCode(500,e));
+        }
+
+        [Route("current/{userId}/setQuantity/{productId}/{quantity}")]
+        [HttpGet]
+        public async Task<IActionResult> SetProductQuantityForCurrentOrder(int userId, int productId, int quantity)
+        {
+            return (await _orderService.SetProductQuanityOnOrder(userId, productId, quantity))
+            .Map(OrderDto.FromModel)
+            .Match(Ok, e => (IActionResult)StatusCode(500, e));
         }
     }
 }

@@ -53,20 +53,42 @@ namespace api.Services
                 This would require a commit-phase were a proper store used.
          */
         public Task<Result<Order, string>> RemoveProductFromOrder(int userId, int productId)
-            => 
+            =>
                 (from user in _store.GetById<User>(userId).ResOfOption(() => $"No user for ID: {userId}")
+                 from product in _store.GetById<Product>(productId).ResOfOption(() => $"No product for ID: {productId}")
+                 from activeOrder in GetOrCreateActiveOrderForUser(userId)
+                 select activeOrder)
+                .Map(res => res.Map(order =>
+                {
+                    if (order.OrderLines.ContainsKey(productId))
+                    {
+                        var quantity = order.OrderLines[productId];
+                        if (quantity - 1 <= 0)
+                        {
+                            order.OrderLines.Remove(productId);
+                        }
+                        else
+                        {
+                            order.OrderLines[productId]--;
+                        }
+                    }
+                    return order;
+                }));
+
+        public Task<Result<Order, string>> SetProductQuanityOnOrder(int userId, int productId, int quantity)
+            =>
+                (from normalisedQuantity in Task.FromResult((quantity < 0 ? Option<int>.None : Option<int>.Some(quantity))
+                    .ResOfOption(() => $"Quantity must be positive; {quantity} is invalid"))
+                from user in _store.GetById<User>(userId).ResOfOption(() => $"No user for ID: {userId}")
                 from product in _store.GetById<Product>(productId).ResOfOption(() => $"No product for ID: {productId}")
                 from activeOrder in GetOrCreateActiveOrderForUser(userId)
                 select activeOrder)
                 .Map(res => res.Map(order => {
-                    if (order.OrderLines.ContainsKey(productId))
+                    if (quantity == 0 && order.OrderLines.ContainsKey(productId))
                     {
-                        var quantity = order.OrderLines[productId];
-                        if (quantity - 1 <= 0) {
-                            order.OrderLines.Remove(productId);
-                        }else {
-                            order.OrderLines[productId]--;
-                        }
+                        order.OrderLines.Remove(productId);
+                    }else {
+                        order.OrderLines[productId] = quantity;
                     }
                     return order;
                 }));
