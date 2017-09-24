@@ -13,8 +13,16 @@ namespace api.Services
         private readonly ConcurrentDictionary<Type, Dictionary<int, IDataItem>> _store =
             new ConcurrentDictionary<Type, Dictionary<int, IDataItem>>();
 
-        public DummyDataStore()
+        /*
+            This class is re-used as the store for the unit tests as it so closely
+            resembles the test stub that would be required.
+
+            Mocking it out using Moq is a pain because of the unbounded generic methods.
+         */
+        public DummyDataStore(bool addDefaultData = true)
         {
+            if (!addDefaultData) return;
+
             var prodDict = new Dictionary<int, IDataItem>();
             prodDict.Add(1, new Product
             {
