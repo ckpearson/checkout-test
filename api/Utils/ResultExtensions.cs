@@ -39,12 +39,13 @@ namespace api.Utils
             return result.Bind(v => Result<TNewSuccess, TError>.AsSuccess(mapFunc(v)));
         }
 
-        public static Result<TNewSucess, TError> Select<TSuccess, TNewSucess, TError>(
-            this Result<TSuccess, TError> result,
-            Func<TSuccess, TNewSucess> projection)
-            => result.Map(projection);
+        /*
+            Not used, preserved for example.
 
-        // public static Result<TNewSuccess, TError> SelectMany<TSuccess, TISuccess, TNewSuccess, TError>(
+            Unit test was written to use it, builds and passes, but vscode gets terribly upset
+            and claims it can't find it.
+         */
+        // public static Result<TNewSuccess, TError> SelectMany<TSuccess, TError, TISuccess, TNewSuccess>(
         //     this Result<TSuccess, TError> result,
         //     Func<TSuccess, Result<TISuccess, TError>> bindFunc,
         //     Func<TSuccess, TISuccess, TNewSuccess> projection)
