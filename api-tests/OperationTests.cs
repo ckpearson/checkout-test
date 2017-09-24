@@ -305,7 +305,7 @@ namespace api_tests
 
             Assert.Equal(1, order.OrderLines[product.Id]);
 
-            await _fixture.OrderService.RemoveProductFromActiveOrder(user.Id,product.Id);
+            await _fixture.OrderService.RemoveProductFromActiveOrder(user.Id, product.Id);
 
             Assert.Empty(order.OrderLines);
         }
@@ -315,7 +315,7 @@ namespace api_tests
         {
             var product = await _fixture.Store.Create<Product>();
 
-            var res = await _fixture.OrderService.SetProductQuanityOnActiveOrder(1, product.Id,10);
+            var res = await _fixture.OrderService.SetProductQuanityOnActiveOrder(1, product.Id, 10);
 
             Assert.False(res.IsSuccess);
         }
@@ -325,7 +325,7 @@ namespace api_tests
         {
             var user = await _fixture.Store.Create<User>();
 
-            var res = await _fixture.OrderService.SetProductQuanityOnActiveOrder(user.Id,10,5);
+            var res = await _fixture.OrderService.SetProductQuanityOnActiveOrder(user.Id, 10, 5);
 
             Assert.False(res.IsSuccess);
         }
@@ -340,7 +340,7 @@ namespace api_tests
 
             var order = (await _fixture.OrderService.GetOrCreateActiveOrderForUser(user.Id)).SuccessValOrThrow();
 
-            var res = await _fixture.OrderService.SetProductQuanityOnActiveOrder(user.Id,product.Id,q);
+            var res = await _fixture.OrderService.SetProductQuanityOnActiveOrder(user.Id, product.Id, q);
 
             Assert.True(order.OrderLines.ContainsKey(product.Id));
             Assert.Equal(q, order.OrderLines[product.Id]);
@@ -357,9 +357,9 @@ namespace api_tests
 
             var order = (await _fixture.OrderService.GetOrCreateActiveOrderForUser(user.Id)).SuccessValOrThrow();
 
-            order.OrderLines.Add(product.Id,initial);
+            order.OrderLines.Add(product.Id, initial);
 
-            await _fixture.OrderService.SetProductQuanityOnActiveOrder(user.Id,product.Id,final);
+            await _fixture.OrderService.SetProductQuanityOnActiveOrder(user.Id, product.Id, final);
 
             Assert.Equal(final, order.OrderLines[product.Id]);
         }
@@ -374,7 +374,7 @@ namespace api_tests
 
             order.OrderLines.Add(product.Id, 10);
 
-            await _fixture.OrderService.SetProductQuanityOnActiveOrder(user.Id,product.Id,0);
+            await _fixture.OrderService.SetProductQuanityOnActiveOrder(user.Id, product.Id, 0);
 
             Assert.Empty(order.OrderLines);
         }
@@ -385,9 +385,92 @@ namespace api_tests
             var user = await _fixture.Store.Create<User>();
             var product = await _fixture.Store.Create<Product>();
 
-            var res = await _fixture.OrderService.SetProductQuanityOnActiveOrder(user.Id,product.Id,-10);
+            var res = await _fixture.OrderService.SetProductQuanityOnActiveOrder(user.Id, product.Id, -10);
 
             Assert.False(res.IsSuccess);
+        }
+
+        [Fact]
+        public async Task OrderService_Clear_ErrorForNoUser()
+        {
+            var res = await _fixture.OrderService.ClearProductsForActiveOrder(10);
+            Assert.False(res.IsSuccess);
+        }
+
+        [Fact]
+        public async Task OrderService_Clear_DoesNothingForOrderWithNoLines()
+        {
+            var user = await _fixture.Store.Create<User>();
+            var order = (await _fixture.OrderService.GetOrCreateActiveOrderForUser(user.Id)).SuccessValOrThrow();
+
+            var res = await _fixture.OrderService.ClearProductsForActiveOrder(user.Id);
+
+            Assert.True(res.IsSuccess);
+        }
+
+        [Fact]
+        public async Task OrderService_Clear_RemovesLinesFromActiveOrder()
+        {
+            var user = await _fixture.Store.Create<User>();
+
+            var order = (await _fixture.OrderService.GetOrCreateActiveOrderForUser(user.Id)).SuccessValOrThrow();
+            order.OrderLines.Add(1, 10);
+            order.OrderLines.Add(2, 5);
+
+            var res = await _fixture.OrderService.ClearProductsForActiveOrder(user.Id);
+            Assert.True(res.IsSuccess);
+
+            Assert.Empty(order.OrderLines);
+        }
+
+        [Fact]
+        public async Task OrderService_CompleteOrder_ErrorIfNoUser()
+        {
+            var orderUser = await _fixture.Store.Create<User>();
+            var order = (await _fixture.OrderService.GetOrCreateActiveOrderForUser(orderUser.Id)).SuccessValOrThrow();
+
+            var res = await _fixture.OrderService.CompleteActiveOrder(orderUser.Id + 1);
+
+            Assert.False(res.IsSuccess);
+        }
+
+        [Fact]
+        public async Task OrderService_CompleteOrder_ErrorIfNoActiveOrder()
+        {
+            var user = await _fixture.Store.Create<User>();
+
+            var res = await _fixture.OrderService.CompleteActiveOrder(user.Id);
+
+            Assert.False(res.IsSuccess);
+        }
+
+        [Fact]
+        public async Task OrderService_CompleteOrder_ErrorIfNoLines()
+        {
+            var user = await _fixture.Store.Create<User>();
+            var order = (await _fixture.OrderService.GetOrCreateActiveOrderForUser(user.Id)).SuccessValOrThrow();
+
+            var res = await _fixture.OrderService.CompleteActiveOrder(user.Id);
+
+            Assert.False(res.IsSuccess);
+        }
+
+        [Fact]
+        public async Task OrderService_CompleteOrder_SuccessAndMarksOrderWithLinesAsComplete()
+        {
+            var user = await _fixture.Store.Create<User>();
+            var product = await _fixture.Store.Create<Product>();
+
+            var order = (await _fixture.OrderService.GetOrCreateActiveOrderForUser(user.Id)).SuccessValOrThrow();
+
+            await _fixture.OrderService.AddProductToActiveOrder(user.Id, product.Id);
+
+            Assert.False(order.CompletionTimestamp.HasValue);
+
+            var res = await _fixture.OrderService.CompleteActiveOrder(user.Id);
+
+            Assert.True(res.IsSuccess);
+            Assert.True(order.CompletionTimestamp.HasValue);
         }
     }
 }
